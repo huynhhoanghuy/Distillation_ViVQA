@@ -4,6 +4,12 @@ I have a large pretrained ViVQA model, I have a small model. Boom!!! I have a sm
 
 Models for Visual Question Answering on ViVQA dataset
 
+# dataset:
+
+https://drive.google.com/file/d/1X5eORxfRTJ_UN26OWHjZnhsQKpo9euiG/view?usp=sharing
+
+
+
 # knowledge-distillation-pytorch
 virtualenv -p python3.8 venv3.8
 source venv3.8/bin/activate
