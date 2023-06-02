@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torchvision import models
 import torch.nn.functional as F
-import utils
+import utils_VQA as utils
 from transformers import AutoFeatureExtractor, AutoModel, AutoConfig, DeiTModel,\
                          DetrForObjectDetection, YolosForObjectDetection
 

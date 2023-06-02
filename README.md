@@ -1,65 +1,106 @@
-# Distillation_ViVQA
-I have a large pretrained ViVQA model, I have a small model. Boom!!! I have a small ViVQA model with high precision.
+# knowledge-distillation-pytorch
+* Exploring knowledge distillation of DNNs for efficient hardware solutions
+* Author: Haitong Li
+* Framework: PyTorch
+* Dataset: CIFAR-10
 
 
-Models for Visual Question Answering on ViVQA dataset
+## Features
+* A framework for exploring "shallow" and "deep" knowledge distillation (KD) experiments
+* Hyperparameters defined by "params.json" universally (avoiding long argparser commands)
+* Hyperparameter searching and result synthesizing (as a table)
+* Progress bar, tensorboard support, and checkpoint saving/loading (utils.py)
+* Pretrained teacher models available for download 
 
-# Requirement
-Python package:
-+ timm
-+ torchinfo
-+ transformers
-# Training
 
-**To train Cross Attention model**
+## Install
+* Clone the repo
+  ```
+  git clone https://github.com/peterliht/knowledge-distillation-pytorch.git
+  ```
 
-!python3 train.py --model 'CrossAtt' \
-                 --backbone 'vit' --image_pretrained 'google/vit-base-patch16-224-in21k'\
-                 --bert_type 'phobert' --bert_pretrained 'vinai/phobert-base' \
-                 --q_dim 768 --v_dim 768 --question_len 20 \
-                 --f_mid_dim 1024 --joint_dim 768 \
-                 --n_coatt 2 \
-                 --data_dir '/content/dataset' \
-                 --output "/content/drive/MyDrive/Colab Notebooks/vivqa-models/CrossAtt/trained_models" \
-                 --init_lr 1e-4 --warmup_steps 5 --weight_decay 1e-5 \
-                 --label_smooth 0.15 --dropout 0.2 \
-                 --batch_size 32 --nepochs 40
+* Install the dependencies (including Pytorch)
+  ```
+  pip install -r requirements.txt
+  ```
 
-**To train Guide Attention model**
-!python3 train_2.py --model 'GuidedAtt' \
-                    --vit_backbone 'vit' --vit_image_pretrained 'google/vit-base-patch16-224-in21k'\
-                    --cnn_backbone 'resnet34' --cnn_image_pretrained 'resnet34'\
-                    --bert_type 'phobert' --bert_pretrained 'vinai/phobert-base' \
-                    --q_dim 768 --v_vit_dim 768 --v_cnn_dim 512 --question_len 20 \
-                    --glimpse 1 --joint_dim 1024 \
-                    --data_dir '/content/dataset' \
-                    --output "/content/drive/MyDrive/Colab Notebooks/vivqa-models/trained_models/GuidedAtt" \
-                    --init_lr 1e-4 --warmup_steps 5 --weight_decay 1e-5 \
-                    --label_smooth 0.0 --dropout 0.3 \
-                    --batch_size 32 --nepochs 40
 
-# Evaluate
+## Organizatoin:
+* ./train.py: main entrance for train/eval with or without KD on CIFAR-10
+* ./experiments/: json files for each experiment; dir for hypersearch
+* ./model/: teacher and student DNNs, knowledge distillation (KD) loss defination, dataloader 
 
-**Evaluate Cross Attention model**
-!python3 test.py --model 'CrossAtt' \
-                 --use_spatial --use_cma \
-                 --backbone 'vit' --image_pretrained 'google/vit-base-patch16-224-in21k'\
-                 --bert_type 'phobert' --bert_pretrained 'vinai/phobert-base' \
-                 --q_dim 768 --v_dim 768 --question_len 20 \
-                 --n_coatt 2 --joint_dim 768 \
-                 --data_dir '/content/dataset' \
-                 --input "/content/drive/MyDrive/Colab Notebooks/vivqa-models/trained_models/CrossAtt/GuidedAtt_vit_resnet34_phobert_25_06_2022__05_36_35.pt" \
-                 --label_smooth 0.15 --dropout 0.2
 
-**Evaluate Guided Attention**
-!python3 test.py --model 'GuidedAtt' \
-                 --use_spatial --use_cma \
-                 --vit_backbone 'vit' --vit_image_pretrained 'google/vit-base-patch16-224-in21k'\
-                 --cnn_backbone 'resnet34' --cnn_image_pretrained 'resnet34'\
-                 --bert_type 'phobert' --bert_pretrained 'vinai/phobert-base' \
-                 --seed 1 \
-                 --q_dim 768 --v_vit_dim 768 --v_cnn_dim 512 --question_len 20 \
-                 --glimpse 1 --joint_dim 1024 \
-                 --data_dir '/content/dataset' \
-                 --input "/content/drive/MyDrive/Colab Notebooks/vivqa-models/trained_models/GuidedAtt/GuidedAtt_vit_resnet34_phobert_28_06_2022__10_41_16.pt" \
-                 --label_smooth 0.15 --dropout 0.2
+## Key notes about usage for your experiments:
+
+* Download the zip file for pretrained teacher model checkpoints from ["experiments.zip"](https://drive.google.com/file/d/12slKl4Vc8SbozFlvb-ahoR95F5yCwB_K/view?usp=sharing)
+* Simply move the unzipped subfolders into 'knowledge-distillation-pytorch/experiments/' (replacing the existing ones if necessary; follow the default path naming)
+* Call train.py to start training 5-layer CNN with ResNet-18's dark knowledge, or training ResNet-18 with state-of-the-art deeper models distilled
+* Use search_hyperparams.py for hypersearch
+* Hyperparameters are defined in params.json files universally. Refer to the header of search_hyperparams.py for details
+
+
+## Train (dataset: CIFAR-10)
+
+Note: all the hyperparameters can be found and modified in 'params.json' under 'model_dir'
+
+-- Train a 5-layer CNN with knowledge distilled from a pre-trained ResNet-18 model
+```
+python train.py --model_dir experiments/cnn_distill
+```
+
+-- Train a ResNet-18 model with knowledge distilled from a pre-trained ResNext-29 teacher
+```
+python train.py --model_dir experiments/resnet18_distill/resnext_teacher
+```
+
+-- Hyperparameter search for a specified experiment ('parent_dir/params.json')
+```
+python search_hyperparams.py --parent_dir experiments/cnn_distill_alpha_temp
+```
+
+--Synthesize results of the recent hypersearch experiments
+```
+python synthesize_results.py --parent_dir experiments/cnn_distill_alpha_temp
+```
+
+
+## Results: "Shallow" and "Deep" Distillation
+
+Quick takeaways (more details to be added):
+
+* Knowledge distillation provides regularization for both shallow DNNs and state-of-the-art DNNs
+* Having unlabeled or partial dataset can benefit from dark knowledge of teacher models
+
+
+-**Knowledge distillation from ResNet-18 to 5-layer CNN**
+
+| Model                   | Dropout = 0.5      |  No Dropout        | 
+| :------------------:    | :----------------: | :-----------------:|
+| 5-layer CNN             | 83.51%             |  84.74%            | 
+| 5-layer CNN w/ ResNet18 | 84.49%             |  **85.69%**        |
+
+-**Knowledge distillation from deeper models to ResNet-18**
+
+
+|Model                      |  Test Accuracy|
+|:--------:                 |   :---------: |
+|Baseline ResNet-18         | 94.175%       |
+|+ KD WideResNet-28-10      | 94.333%       |
+|+ KD PreResNet-110         | 94.531%       |
+|+ KD DenseNet-100          | 94.729%       |
+|+ KD ResNext-29-8          | **94.788%**   |
+
+
+
+## References
+
+H. Li, "Exploring knowledge distillation of Deep neural nets for efficient hardware solutions," [CS230 Report](http://cs230.stanford.edu/files_winter_2018/projects/6940224.pdf), 2018
+
+Hinton, Geoffrey, Oriol Vinyals, and Jeff Dean. "Distilling the knowledge in a neural network." arXiv preprint arXiv:1503.02531 (2015).
+
+Romero, A., Ballas, N., Kahou, S. E., Chassang, A., Gatta, C., & Bengio, Y. (2014). Fitnets: Hints for thin deep nets. arXiv preprint arXiv:1412.6550.
+
+https://github.com/cs230-stanford/cs230-stanford.github.io
+
+https://github.com/bearpaw/pytorch-classification
