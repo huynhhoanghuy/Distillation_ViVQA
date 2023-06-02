@@ -1,4 +1,11 @@
 # knowledge-distillation-pytorch
+
+# dataset:
+
+https://drive.google.com/file/d/1X5eORxfRTJ_UN26OWHjZnhsQKpo9euiG/view?usp=sharing
+
+
+
 virtualenv -p python3.8 venv3.8
 source venv3.8/bin/activate
 
