@@ -8,8 +8,8 @@ from torch.autograd import Variable
 import numpy as np
 from transformer.Layers import EncoderLayer
 from transformer.Models import PositionalEncoding
-from transformers import BertModel, BertConfig
-
+from transformers import BertModel, BertConfig, AutoConfig, AutoModel
+import utils
 class WordEmbedding(nn.Module):
     """Word Embedding
 
@@ -104,8 +104,8 @@ class BertQuestionEmbedding(nn.Module):
         """
         super(BertQuestionEmbedding, self).__init__()
         self.device = device
-        self.config = BertConfig.from_pretrained(pretrained)
-        self.model = BertModel.from_pretrained(pretrained).to(device)
+        self.config = AutoConfig.from_pretrained(pretrained)
+        self.model = AutoModel.from_pretrained(pretrained).to(device)
         self.mhsa = None
         if use_mhsa:
             embed_dim = self.model.config.hidden_size

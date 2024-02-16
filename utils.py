@@ -13,12 +13,12 @@ from PIL import Image
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch._six import string_classes
+# from torch._six import string_classes
 from torch.utils.data.dataloader import default_collate
 import math
 import time
 import pandas as pd
-
+string_classes=str
 
 EPS = 1e-7
 numpy_type_map = {
@@ -313,6 +313,7 @@ def generate_spatial_batch(N, featmap_H, featmap_W):
 def set_parameters_requires_grad(model, requires_grad=True):
     for param in model.parameters():
         param.requires_grad = requires_grad
+    return model
         
 def softmax(x):
     # return np.exp(x) / sum(np.exp(x))
@@ -320,8 +321,17 @@ def softmax(x):
     return e_x / e_x.sum(axis=0)
 
 def calc_acc(y_pred, y_target):
+    # print(y_pred.shape)
     y_pred = F.softmax(y_pred, dim=1)
+    # print(y_pred.shape)
+    
     y_pred = torch.argmax(y_pred, dim=1, keepdim=False)
+    # print(y_pred.shape)
+    # print(y_target.shape)
+    # exit()
+    return torch.sum(y_pred == y_target).float() / y_target.shape[0]
+
+def calc_acc_v2(y_pred, y_target):
     return torch.sum(y_pred == y_target).float() / y_target.shape[0]
 
 def compute_score_with_logits(logits, labels):
@@ -330,3 +340,14 @@ def compute_score_with_logits(logits, labels):
     one_hots.scatter_(1, logits.view(-1, 1), 1)
     scores = (one_hots * labels)
     return scores
+
+def calc_acc_v3(y_pred, y_target, dictionary):
+
+    y_pred = F.softmax(y_pred, dim=1)
+    
+    y_pred = torch.argmax(y_pred, dim=1, keepdim=False)
+    
+    y_pred = torch.tensor([dictionary[y_pred.item()]], device='cuda:0')
+    
+
+    return torch.sum(y_pred == y_target).float() / y_target.shape[0]

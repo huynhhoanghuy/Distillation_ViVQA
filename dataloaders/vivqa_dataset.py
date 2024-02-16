@@ -8,6 +8,7 @@ import json
 from csv import DictReader
 
 from transformers import AutoTokenizer
+from torchvision import transforms
 
 # for image: (224, 224) -> (224, 224, 3)
 
@@ -81,14 +82,19 @@ class ViVQADataset(data.Dataset):
 
         sample_t = {'image': img, 'label': label_placeholder}
         if self.transform:
-            sample_t = self.transform(sample_t)
+            tensor_img = transforms.ToTensor()(img)
+            sample_t = self.transform(tensor_img)
+            sample_t = transforms.ToPILImage()(sample_t)
+        else:
+            sample_t = img
 
         return {
             'question': question,
             'org_image': img,
-            'image': sample_t['image'],
+            'image': sample_t,
             'label': label,
-            'answer': answer
+            'answer': answer,
+            'img_path':img_path
         }
 
 
@@ -110,10 +116,12 @@ class VTCollator:
             encodings['org_image'] = [x['org_image'] for x in batch]
             encodings['org_question'] = [x['question'] for x in batch]
             encodings['answer'] = [x['answer'] for x in batch]
+            encodings['img_path'] = [x['img_path'] for x in batch]
             
         encodings['image'] = self.feature_extractor([x['image'] for x in batch], return_tensors='pt') 
         encodings['question'] = self.tokenizer([x['question'] for x in batch], padding='max_length', 
                                                max_length=self.question_length, truncation=True, return_tensors='pt')
         encodings['label'] = torch.tensor([x['label'] for x in batch])
+        encodings['org_image'] = [x['org_image'] for x in batch]
 
         return encodings

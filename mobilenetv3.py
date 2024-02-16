@@ -4,7 +4,7 @@ Andrew Howard, Mark Sandler, Grace Chu, Liang-Chieh Chen, Bo Chen, Mingxing Tan,
 Searching for MobileNetV3
 arXiv preprint arXiv:1905.02244.
 """
-
+import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
 
@@ -149,7 +149,9 @@ class MobileNetV3(nn.Module):
         self.features = nn.Sequential(*layers)
         # building last several layers
 
-        self.conv = conv_1x1_bn(input_channel, 512)
+        # self.conv = conv_1x1_bn(input_channel, 512*49)
+        self.conv = conv_1x1_bn(input_channel, exp_size)
+        self.conv_adj = nn.Conv2d(in_channels=40*6, out_channels=512*49, kernel_size=1) 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         # output_channel = {'large': 512, 'small': 512}
         # output_channel = _make_divisible(output_channel[mode] * width_mult, 8) if width_mult > 1.0 else output_channel[mode]
@@ -161,6 +163,7 @@ class MobileNetV3(nn.Module):
         # )
         # self.linear = nn.Linear(exp_size, output_channel)
         # self.outMobiNet = nnf.interpolate(self.linear, size=(7, 7), mode='bicubic', align_corners=False)
+        # load_state_dict(torch.load("/home/dmp/1.User/huy.hhoang/1/distill/Distillation_ViVQA/pretrained_mobileNet/mobilenetv3-small-55df8e1f.pth"),strict=False)
         self._initialize_weights()
 
     def forward(self, x):
@@ -168,17 +171,20 @@ class MobileNetV3(nn.Module):
         # print(x)
         x = x['pixel_values']
         x = self.features(x)
-        # print(x.shape)
         x = self.conv(x)
-        # print(x.shape)
+        # print("VIT:",x.shape)
+        x = self.conv_adj(x)
+        # print("VIT:",x.shape)
         x = self.avgpool(x)
+        x = torch.squeeze(x)
+        # print("VIT:",x.shape)
+        x = x.view(-1,49,512)
         # print(x.shape)
-        # print('--------------------------')
-        # exit()
-        b, dim, w, h = x.shape
-        return x.view((b, dim, -1)).permute((0, 2, 1))
-        # x = x.view(x.size(0), -1)
-        # return x
+
+        
+
+        return x
+
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -215,8 +221,14 @@ class MobileNetV3ViT(nn.Module):
         self.features = nn.Sequential(*layers)
         # building last several layers
 
-        self.conv = conv_1x1_bn(input_channel, 176*48)
-        self.avgpool = nn.AdaptiveAvgPool2d((4, 4))
+        # self.conv = conv_1x1_bn(input_channel, 197*48)
+        # self.avgpool = nn.AdaptiveAvgPool2d((4, 4))
+
+        # self.conv = conv_1x1_bn(input_channel, 768*197)
+        self.conv = conv_1x1_bn(input_channel, exp_size)
+        self.conv_adj = nn.Conv2d(in_channels=40*6, out_channels=768*197, kernel_size=1) 
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
         # output_channel = {'large': 512, 'small': 512}
         # output_channel = _make_divisible(output_channel[mode] * width_mult, 8) if width_mult > 1.0 else output_channel[mode]
         # self.classifier = nn.Sequential(
@@ -235,13 +247,17 @@ class MobileNetV3ViT(nn.Module):
         x = x['pixel_values']
         x = self.features(x)
         x = self.conv(x)
+        # print("VIT:",x.shape)
+        x = self.conv_adj(x)
+        # print("VIT:",x.shape)
         x = self.avgpool(x)
-        x = x.view(-1,768,176)
-        # print(x.shape)
-        # exit()
-        b, dim, _ = x.shape
+        x = torch.squeeze(x)
+        # print("VIT:",x.shape)
+        x = x.view(-1,197,768)
+        
+        
 
-        return x.view((b, dim, -1)).permute((0, 2, 1))
+        return x
         # x = x.view(x.size(0), -1)
         # return x
 
@@ -289,6 +305,17 @@ def mobilenetv3_small(**kwargs):
     """
     Constructs a MobileNetV3-Small model
     """
+    # cfgs = [
+    #     # k, t, c, SE, HS, s 
+    #     [3,    1,  16, 1, 0, 2],
+    #     [3,  4.5,  24, 0, 0, 2],
+    #     [3, 3.67,  24, 0, 0, 1],
+    #     [5,    4,  40, 1, 1, 2],
+    #     [5,    6,  40, 1, 1, 1],
+    #     [5,    6,  40, 1, 1, 1],
+    #     [5,    6,  512, 1, 1, 1],
+    #     [5,    6,  1, 1, 1, 1],
+    # ]
     cfgs = [
         # k, t, c, SE, HS, s 
         [3,    1,  16, 1, 0, 2],
@@ -296,20 +323,24 @@ def mobilenetv3_small(**kwargs):
         [3, 3.67,  24, 0, 0, 1],
         [5,    4,  40, 1, 1, 2],
         [5,    6,  40, 1, 1, 1],
-        [5,    6,  40, 1, 1, 1],
-        [5,    3,  48, 1, 1, 1],
-        [5,    3,  48, 1, 1, 1],
-        [5,    6,  96, 1, 1, 2],
-        [5,    6,  96, 1, 1, 1],
-        [5,    6,  96, 1, 1, 1],
     ]
-
     return MobileNetV3(cfgs, mode='small', **kwargs)
 
 def mobilenetv3_smallViT(**kwargs):
     """
     Constructs a MobileNetV3-Small model
     """
+    # cfgs = [
+    #     # k, t, c, SE, HS, s 
+    #     [3,    1,  16, 1, 0, 2],
+    #     [3,  4.5,  24, 0, 0, 2],
+    #     [3, 3.67,  24, 0, 0, 1],
+    #     [5,    4,  40, 1, 1, 2],
+    #     [5,    6,  40, 1, 1, 1],
+    #     [5,    6,  40, 1, 1, 1],
+    #     [5,    6,  768, 1, 1, 1],
+    #     [5,    6,  1, 1, 1, 1],
+    # ]
     cfgs = [
         # k, t, c, SE, HS, s 
         [3,    1,  16, 1, 0, 2],
@@ -317,12 +348,6 @@ def mobilenetv3_smallViT(**kwargs):
         [3, 3.67,  24, 0, 0, 1],
         [5,    4,  40, 1, 1, 2],
         [5,    6,  40, 1, 1, 1],
-        [5,    6,  40, 1, 1, 1],
-        [5,    3,  48, 1, 1, 1],
-        [5,    3,  48, 1, 1, 1],
-        [5,    6,  96, 1, 1, 2],
-        [5,    6,  96, 1, 1, 1],
-        [5,    6,  96, 1, 1, 1],
     ]
 
     return MobileNetV3ViT(cfgs, mode='small', **kwargs)
