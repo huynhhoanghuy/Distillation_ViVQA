@@ -24,4 +24,4 @@ pip3 install -r requirements.txt
 
 HOW TO RUN:
 
-bash train_tunning.sh
+bash test_MoVE.sh
